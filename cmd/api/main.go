@@ -4,12 +4,23 @@ package main
 
 // @title Array Banking API
 // @version 1.0
-// @description Production-quality banking REST API for developer assessment and interviewing. Provides core banking functionality including identity management, account operations, customer management, and transaction processing.
+// @description Production-quality banking REST API for developer assessment and interviewing. Provides core banking functionality including identity management, account operations, customer management, transaction processing, NorthWind Bank integration, and regulator compliance notifications.
+//
+// @contact.name API Support
+// @contact.email support@arraybanking.com
+//
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+//
+// @servers.url http://localhost:8080
+// @servers.description Local development server
+// @servers.url https://api.arraybanking.com
+// @servers.description Production server
 //
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
-// @description Type "Bearer" followed by a space and JWT token.
+// @description Type "Bearer" followed by a space and JWT token. Example: "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
 
 import (
 	"context"
