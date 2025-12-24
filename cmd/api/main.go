@@ -79,6 +79,7 @@ func main() {
 	transactionRepo := repositories.NewTransactionRepository(db)
 	transferRepo := repositories.NewTransferRepository(db)
 	processingQueueRepo := repositories.NewProcessingQueueRepository(db)
+	externalAccountRepo := repositories.NewExternalAccountRepository(db)
 
 	// Initialize services
 	auditService := services.NewAuditService(auditLogRepo)
@@ -129,6 +130,25 @@ func main() {
 	accountAssociationService := services.NewAccountAssociationService(userRepo, accountRepo, auditService, slog.Default())
 	customerLogger := services.NewCustomerLogger(slog.Default())
 
+	// External account and transfer services
+	externalAccountService := services.NewExternalAccountService(
+		externalAccountRepo,
+		userRepo,
+		northWindService,
+		auditService,
+		slog.Default(),
+	)
+
+	northWindTransferService := services.NewNorthWindTransferService(
+		transferRepo,
+		accountRepo,
+		externalAccountRepo,
+		transactionRepo,
+		northWindService,
+		auditService,
+		slog.Default(),
+	)
+
 	processingCtx, cancelProcessing := context.WithCancel(context.Background())
 	defer cancelProcessing()
 
@@ -145,6 +165,8 @@ func main() {
 	customerHandler := handlers.NewCustomerHandler(customerSearchService, customerProfileService, accountAssociationService, passwordService, auditService, customerLogger, prometheusMetrics)
 	healthCheckHandler := handlers.NewHealthCheckHandler(db)
 	docsHandler := handlers.NewDocsHandler()
+	externalAccountHandler := handlers.NewExternalAccountHandler(externalAccountService)
+	externalTransferHandler := handlers.NewExternalTransferHandler(northWindTransferService)
 
 	api := e.Group("/api/v1")
 	tokenSvc := tokenService.(*services.TokenService)
@@ -154,6 +176,9 @@ func main() {
 	addDevEndpoints(api, tokenSvc, blacklistedTokenRepo, devHandler)
 	addAdminEndpoints(api, tokenSvc, blacklistedTokenRepo, adminHandler, accountHandler)
 	addHealthCheckEndpoint(api, healthCheckHandler)
+	addDocumentationEndpoints(e, docsHandler)
+	addExternalAccountEndpoints(api, tokenSvc, blacklistedTokenRepo, externalAccountHandler)
+	addExternalTransferEndpoints(api, tokenSvc, blacklistedTokenRepo, externalTransferHandler)
 	addDocumentationEndpoints(e, docsHandler)
 
 	go func() {
@@ -276,9 +301,25 @@ func addCustomerEndpoints(api *echo.Group, tokenService *services.TokenService, 
 	selfServiceGroup.PUT("/password", customerHandler.UpdateMyPassword)
 }
 
-// addDocumentationEndpoints registers the health check endpoint
+// addHealthCheckEndpoint registers the health check endpoint
 func addHealthCheckEndpoint(api *echo.Group, healthCheckHandler *handlers.HealthCheckHandler) {
 	api.GET("/health", healthCheckHandler.HealthCheck)
+}
+
+// addExternalAccountEndpoints registers external account management endpoints
+func addExternalAccountEndpoints(api *echo.Group, tokenService *services.TokenService, blacklistedTokenRepo repositories.BlacklistedTokenRepositoryInterface, externalAccountHandler *handlers.ExternalAccountHandler) {
+	externalAccountGroup := api.Group("/external-accounts", middleware.RequireAuth(tokenService, blacklistedTokenRepo))
+	externalAccountGroup.POST("", externalAccountHandler.RegisterExternalAccount)
+	externalAccountGroup.GET("", externalAccountHandler.GetExternalAccounts)
+	externalAccountGroup.GET("/:accountId", externalAccountHandler.GetExternalAccount)
+	externalAccountGroup.DELETE("/:accountId", externalAccountHandler.DeleteExternalAccount)
+}
+
+// addExternalTransferEndpoints registers external transfer endpoints
+func addExternalTransferEndpoints(api *echo.Group, tokenService *services.TokenService, blacklistedTokenRepo repositories.BlacklistedTokenRepositoryInterface, externalTransferHandler *handlers.ExternalTransferHandler) {
+	externalTransferGroup := api.Group("/external-transfers", middleware.RequireAuth(tokenService, blacklistedTokenRepo))
+	externalTransferGroup.POST("", externalTransferHandler.InitiateExternalTransfer)
+	externalTransferGroup.GET("/:transferId/status", externalTransferHandler.GetTransferStatus)
 }
 
 // addDocumentationEndpoints registers API documentation routes
