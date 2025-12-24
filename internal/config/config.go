@@ -18,10 +18,11 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
-	Security SecurityConfig
+	Server    ServerConfig
+	Database  DatabaseConfig
+	JWT       JWTConfig
+	Security  SecurityConfig
+	NorthWind NorthWindConfig
 }
 
 type ServerConfig struct {
@@ -64,9 +65,19 @@ type SecurityConfig struct {
 	RequireSpecialChars bool
 }
 
+type NorthWindConfig struct {
+	BaseURL       string
+	APIKey        string
+	APISecret     string
+	Timeout       time.Duration
+	RetryAttempts int
+	RetryDelay    time.Duration
+	EnableAuth    bool
+}
+
 func Load() *Config {
-	// Load .env file if it exists (non-blocking - continues if file not found)
-	godotenv.Load()
+	// load .env file if present (non-fatal)
+	_ = godotenv.Load()
 
 	config := &Config{
 		Server: ServerConfig{
@@ -101,6 +112,15 @@ func Load() *Config {
 			AccessTokenDuration:  getDurationEnv("JWT_ACCESS_TOKEN_DURATION", 24*time.Hour),
 			RefreshTokenDuration: getDurationEnv("JWT_REFRESH_TOKEN_DURATION", 7*24*time.Hour),
 			Issuer:               getEnv("JWT_ISSUER", "banking-api"),
+		},
+		NorthWind: NorthWindConfig{
+			BaseURL:       getEnv("NORTHWIND_BASE_URL", ""),
+			APIKey:        getEnv("NORTHWIND_API_KEY", ""),
+			APISecret:     getEnv("NORTHWIND_API_SECRET", ""), // Optional - only needed if NorthWind requires it
+			Timeout:       getDurationEnv("NORTHWIND_TIMEOUT", 30*time.Second),
+			RetryAttempts: getIntEnv("NORTHWIND_RETRY_ATTEMPTS", 3),
+			RetryDelay:    getDurationEnv("NORTHWIND_RETRY_DELAY", 2*time.Second),
+			EnableAuth:    getBoolEnv("NORTHWIND_ENABLE_AUTH", true),
 		},
 	}
 

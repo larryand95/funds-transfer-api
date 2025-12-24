@@ -53,6 +53,17 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 func main() {
 	cfg = config.Load()
 
+	// Initialize NorthWind client (authenticate on startup if enabled)
+	northWindService := services.NewNorthWindService(cfg.NorthWind, slog.Default())
+	if cfg.NorthWind.EnableAuth && cfg.NorthWind.BaseURL != "" {
+		if err := northWindService.Authenticate(); err != nil {
+			log.Printf("Warning: Failed to authenticate with NorthWind: %v", err)
+			log.Println("NorthWind integration will be unavailable until authentication succeeds")
+		} else {
+			log.Println("Successfully authenticated with NorthWind Bank")
+		}
+	}
+
 	// Initialize database
 	db, err := database.Initialize(cfg)
 	if err != nil {

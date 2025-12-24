@@ -198,6 +198,24 @@ type CustomerLoggerInterface interface {
 	LogAuthorizationFailure(ctx context.Context, operation string, userID uuid.UUID, requiredRole string)
 }
 
+// NorthWindServiceInterface defines the contract for NorthWind Bank integration
+type NorthWindServiceInterface interface {
+	// Authenticate authenticates with NorthWind API
+	Authenticate() error
+
+	// IsAuthenticated checks if we have a valid authentication token
+	IsAuthenticated() bool
+
+	// VerifyAccount verifies an external account at NorthWind Bank
+	VerifyAccount(req dto.NorthWindAccountVerificationRequest) (*dto.NorthWindAccountVerificationResponse, error)
+
+	// InitiateTransfer initiates a transfer to a NorthWind account
+	InitiateTransfer(req dto.NorthWindTransferRequest) (*dto.NorthWindTransferResponse, error)
+
+	// GetTransferStatus checks the status of a transfer
+	GetTransferStatus(transferID string) (*dto.NorthWindTransferStatusResponse, error)
+}
+
 type TransactionProcessingServiceInterface interface {
 	EnqueueTransaction(transactionID uuid.UUID, operation string, priority int) error
 	StartProcessing(ctx context.Context)
