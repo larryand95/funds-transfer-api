@@ -88,6 +88,7 @@ func (r *transferRepository) FindByUserAccounts(accountIDs []uuid.UUID, offset, 
 }
 
 // FindByUserAccountsWithFilters retrieves transfers with filtering options
+// Also includes external transfers where the user's account is the from_account
 func (r *transferRepository) FindByUserAccountsWithFilters(accountIDs []uuid.UUID, filters models.TransferFilters, offset, limit int) ([]models.Transfer, int64, error) {
 	var transfers []models.Transfer
 	var total int64
@@ -96,6 +97,7 @@ func (r *transferRepository) FindByUserAccountsWithFilters(accountIDs []uuid.UUI
 		return transfers, 0, nil
 	}
 
+	// Include both internal transfers (to_account_id) and external transfers (from_account_id)
 	query := r.db.Model(&models.Transfer{}).
 		Where("from_account_id IN ? OR to_account_id IN ?", accountIDs, accountIDs)
 
