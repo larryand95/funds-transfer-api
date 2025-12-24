@@ -66,6 +66,11 @@ func (db *DB) AutoMigrate() error {
 		return fmt.Errorf("failed to migrate Account: %w", err)
 	}
 
+	// 3a. ExternalAccount (depends on User)
+	if err := db.DB.AutoMigrate(&models.ExternalAccount{}); err != nil {
+		return fmt.Errorf("failed to migrate ExternalAccount: %w", err)
+	}
+
 	// 4. AuditLog (depends on User and Account)
 	if err := db.DB.AutoMigrate(&models.AuditLog{}); err != nil {
 		return fmt.Errorf("failed to migrate AuditLog: %w", err)
