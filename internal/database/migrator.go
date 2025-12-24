@@ -76,8 +76,14 @@ func (mr *MigrationRunner) RunMigrations() error {
 		return fmt.Errorf("failed to create postgres driver: %w", err)
 	}
 
+	// Convert path separators to forward slashes for file:// URL (cross-platform compatible)
+	// On Windows: converts backslashes (\) to forward slashes (/)
+	// On Unix/Mac: returns path unchanged (already uses /)
+	// file:// URLs always use forward slashes regardless of OS
+	migrationURL := "file://" + filepath.ToSlash(absPath)
+
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", absPath),
+		migrationURL,
 		"postgres",
 		driver,
 	)
@@ -177,8 +183,14 @@ func (mr *MigrationRunner) GetMigrationStatus() (version uint, dirty bool, err e
 		return 0, false, fmt.Errorf("failed to create postgres driver: %w", err)
 	}
 
+	// Convert path separators to forward slashes for file:// URL (cross-platform compatible)
+	// On Windows: converts backslashes (\) to forward slashes (/)
+	// On Unix/Mac: returns path unchanged (already uses /)
+	// file:// URLs always use forward slashes regardless of OS
+	migrationURL := "file://" + filepath.ToSlash(absPath)
+
 	m, err := migrate.NewWithDatabaseInstance(
-		fmt.Sprintf("file://%s", absPath),
+		migrationURL,
 		"postgres",
 		driver,
 	)
