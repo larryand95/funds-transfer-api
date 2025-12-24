@@ -24,25 +24,25 @@ func New(cfg *config.DatabaseConfig) (*DB, error) {
 			return time.Now().UTC()
 		},
 	}
-	
+
 	db, err := gorm.Open(postgres.Open(cfg.DSN()), gormConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	
+
 	sqlDB, err := db.DB()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sql.DB: %w", err)
 	}
-	
+
 	sqlDB.SetMaxOpenConns(cfg.MaxConnections)
 	sqlDB.SetMaxIdleConns(cfg.MaxIdleConns)
 	sqlDB.SetConnMaxLifetime(cfg.ConnMaxLifetime)
-	
+
 	if err := sqlDB.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
-	
+
 	return &DB{
 		DB:     db,
 		config: cfg,
@@ -50,16 +50,43 @@ func New(cfg *config.DatabaseConfig) (*DB, error) {
 }
 
 func (db *DB) AutoMigrate() error {
-	return db.DB.AutoMigrate(
-		&models.User{},
-		&models.RefreshToken{},
-		&models.BlacklistedToken{},
-		&models.AuditLog{},
-		&models.Account{},
-		&models.Transaction{},
-		&models.Transfer{},
-		&models.ProcessingQueueItem{},
-	)
+	// Migrate tables in dependency order to avoid foreign key constraint errors
+	// 1. Base tables (no dependencies)
+	if err := db.DB.AutoMigrate(&models.User{}); err != nil {
+		return fmt.Errorf("failed to migrate User: %w", err)
+	}
+
+	// 2. Tables that depend on User
+	if err := db.DB.AutoMigrate(&models.RefreshToken{}, &models.BlacklistedToken{}); err != nil {
+		return fmt.Errorf("failed to migrate token tables: %w", err)
+	}
+
+	// 3. Account (depends on User)
+	if err := db.DB.AutoMigrate(&models.Account{}); err != nil {
+		return fmt.Errorf("failed to migrate Account: %w", err)
+	}
+
+	// 4. AuditLog (depends on User and Account)
+	if err := db.DB.AutoMigrate(&models.AuditLog{}); err != nil {
+		return fmt.Errorf("failed to migrate AuditLog: %w", err)
+	}
+
+	// 5. Transaction (depends on Account)
+	if err := db.DB.AutoMigrate(&models.Transaction{}); err != nil {
+		return fmt.Errorf("failed to migrate Transaction: %w", err)
+	}
+
+	// 6. Transfer (depends on Account and Transaction)
+	if err := db.DB.AutoMigrate(&models.Transfer{}); err != nil {
+		return fmt.Errorf("failed to migrate Transfer: %w", err)
+	}
+
+	// 7. ProcessingQueueItem (depends on Transaction)
+	if err := db.DB.AutoMigrate(&models.ProcessingQueueItem{}); err != nil {
+		return fmt.Errorf("failed to migrate ProcessingQueueItem: %w", err)
+	}
+
+	return nil
 }
 
 func (db *DB) Close() error {
@@ -121,27 +148,27 @@ func (db *DB) CreateIndexes() error {
 		"CREATE INDEX IF NOT EXISTS idx_transfers_debit_transaction_id ON transfers(debit_transaction_id) WHERE debit_transaction_id IS NOT NULL",
 		"CREATE INDEX IF NOT EXISTS idx_transfers_credit_transaction_id ON transfers(credit_transaction_id) WHERE credit_transaction_id IS NOT NULL",
 	}
-	
+
 	for _, query := range queries {
 		if err := db.DB.Exec(query).Error; err != nil {
 			log.Printf("Failed to create index: %s, error: %v", query, err)
 		}
 	}
-	
+
 	return nil
 }
 
 func (db *DB) CleanupExpiredTokens() error {
 	now := time.Now()
-	
+
 	if err := db.DB.Where("expires_at < ?", now).Delete(&models.RefreshToken{}).Error; err != nil {
 		return fmt.Errorf("failed to cleanup expired refresh tokens: %w", err)
 	}
-	
+
 	if err := db.DB.Where("expires_at < ?", now).Delete(&models.BlacklistedToken{}).Error; err != nil {
 		return fmt.Errorf("failed to cleanup expired blacklisted tokens: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -150,18 +177,18 @@ func (db *DB) SeedAdminUser(email, password, firstName, lastName string) (*model
 	if err := db.DB.Where("email = ?", email).First(&existingUser).Error; err == nil {
 		return &existingUser, nil
 	}
-	
+
 	user := &models.User{
 		Email:     email,
 		FirstName: firstName,
 		LastName:  lastName,
 		Role:      models.RoleAdmin,
 	}
-	
+
 	if err := db.DB.Create(user).Error; err != nil {
 		return nil, fmt.Errorf("failed to create admin user: %w", err)
 	}
-	
+
 	return user, nil
 }
 
