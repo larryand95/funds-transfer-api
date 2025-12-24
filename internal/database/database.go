@@ -91,6 +91,11 @@ func (db *DB) AutoMigrate() error {
 		return fmt.Errorf("failed to migrate ProcessingQueueItem: %w", err)
 	}
 
+	// 8. RegulatorNotification (depends on Transfer)
+	if err := db.DB.AutoMigrate(&models.RegulatorNotification{}); err != nil {
+		return fmt.Errorf("failed to migrate RegulatorNotification: %w", err)
+	}
+
 	return nil
 }
 

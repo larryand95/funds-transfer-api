@@ -13,8 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -23,6 +21,7 @@ type Config struct {
 	JWT       JWTConfig
 	Security  SecurityConfig
 	NorthWind NorthWindConfig
+	Regulator RegulatorConfig
 }
 
 type ServerConfig struct {
@@ -75,10 +74,16 @@ type NorthWindConfig struct {
 	EnableAuth    bool
 }
 
-func Load() *Config {
-	// load .env file if present (non-fatal)
-	_ = godotenv.Load()
+type RegulatorConfig struct {
+	WebhookURL    string
+	WebhookSecret string
+	Timeout       time.Duration
+	MaxRetries    int
+	EnableSigning bool
+	Enabled       bool
+}
 
+func Load() *Config {
 	config := &Config{
 		Server: ServerConfig{
 			Port:         getEnv("SERVER_PORT", "8080"),
@@ -121,6 +126,14 @@ func Load() *Config {
 			RetryAttempts: getIntEnv("NORTHWIND_RETRY_ATTEMPTS", 3),
 			RetryDelay:    getDurationEnv("NORTHWIND_RETRY_DELAY", 2*time.Second),
 			EnableAuth:    getBoolEnv("NORTHWIND_ENABLE_AUTH", true),
+		},
+		Regulator: RegulatorConfig{
+			WebhookURL:    getEnv("REGULATOR_WEBHOOK_URL", ""),
+			WebhookSecret: getEnv("REGULATOR_WEBHOOK_SECRET", ""),
+			Timeout:       getDurationEnv("REGULATOR_WEBHOOK_TIMEOUT", 5*time.Second),
+			MaxRetries:    getIntEnv("REGULATOR_WEBHOOK_MAX_RETRIES", 10),
+			EnableSigning: getBoolEnv("REGULATOR_WEBHOOK_ENABLE_SIGNING", false),
+			Enabled:       getBoolEnv("REGULATOR_WEBHOOK_ENABLED", false),
 		},
 	}
 

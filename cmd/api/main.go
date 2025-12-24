@@ -28,6 +28,7 @@ import (
 	"github.com/array/banking-api/internal/services"
 	"github.com/array/banking-api/internal/validation"
 	"github.com/go-playground/validator/v10"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 )
@@ -51,6 +52,10 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 }
 
 func main() {
+	// Load environment variables from .env file
+	// This is optional - if .env doesn't exist, continue with system env vars
+	_ = godotenv.Load()
+
 	cfg = config.Load()
 
 	// Initialize NorthWind client (authenticate on startup if enabled)
@@ -139,6 +144,14 @@ func main() {
 		slog.Default(),
 	)
 
+	// Regulator notification service
+	regulatorNotificationRepo := repositories.NewRegulatorNotificationRepository(db)
+	regulatorNotificationService := services.NewRegulatorNotificationService(
+		regulatorNotificationRepo,
+		cfg.Regulator,
+		slog.Default(),
+	)
+
 	northWindTransferService := services.NewNorthWindTransferService(
 		transferRepo,
 		accountRepo,
@@ -146,6 +159,7 @@ func main() {
 		transactionRepo,
 		northWindService,
 		auditService,
+		regulatorNotificationService,
 		slog.Default(),
 	)
 
@@ -153,6 +167,17 @@ func main() {
 	defer cancelProcessing()
 
 	go processingService.StartProcessing(processingCtx)
+
+	// Start regulator notification worker if enabled
+	if cfg.Regulator.Enabled {
+		regulatorWorker := services.NewRegulatorNotificationWorker(
+			regulatorNotificationRepo,
+			regulatorNotificationService,
+			slog.Default(),
+		)
+		go regulatorWorker.Start(processingCtx)
+		log.Println("Regulator notification worker started")
+	}
 
 	e := configureEcho()
 

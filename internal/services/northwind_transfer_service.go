@@ -22,13 +22,14 @@ var (
 
 // NorthWindTransferService handles transfers to NorthWind Bank
 type NorthWindTransferService struct {
-	transferRepo        repositories.TransferRepositoryInterface
-	accountRepo         repositories.AccountRepositoryInterface
-	externalAccountRepo repositories.ExternalAccountRepositoryInterface
-	transactionRepo     repositories.TransactionRepositoryInterface
-	northWindService    NorthWindServiceInterface
-	auditService        AuditServiceInterface
-	logger              *slog.Logger
+	transferRepo                 repositories.TransferRepositoryInterface
+	accountRepo                  repositories.AccountRepositoryInterface
+	externalAccountRepo          repositories.ExternalAccountRepositoryInterface
+	transactionRepo              repositories.TransactionRepositoryInterface
+	northWindService             NorthWindServiceInterface
+	auditService                 AuditServiceInterface
+	regulatorNotificationService *RegulatorNotificationService // Optional
+	logger                       *slog.Logger
 }
 
 // NewNorthWindTransferService creates a new NorthWind transfer service
@@ -39,6 +40,7 @@ func NewNorthWindTransferService(
 	transactionRepo repositories.TransactionRepositoryInterface,
 	northWindService NorthWindServiceInterface,
 	auditService AuditServiceInterface,
+	regulatorNotificationService *RegulatorNotificationService, // Optional, can be nil
 	logger *slog.Logger,
 ) *NorthWindTransferService {
 	if logger == nil {
@@ -46,13 +48,14 @@ func NewNorthWindTransferService(
 	}
 
 	return &NorthWindTransferService{
-		transferRepo:        transferRepo,
-		accountRepo:         accountRepo,
-		externalAccountRepo: externalAccountRepo,
-		transactionRepo:     transactionRepo,
-		northWindService:    northWindService,
-		auditService:        auditService,
-		logger:              logger,
+		transferRepo:                 transferRepo,
+		accountRepo:                  accountRepo,
+		externalAccountRepo:          externalAccountRepo,
+		transactionRepo:              transactionRepo,
+		northWindService:             northWindService,
+		auditService:                 auditService,
+		regulatorNotificationService: regulatorNotificationService,
+		logger:                       logger,
 	}
 }
 
@@ -185,8 +188,8 @@ func (s *NorthWindTransferService) InitiateExternalTransfer(
 			Resource:   "transfer",
 			ResourceID: transfer.ID.String(),
 			IPAddress:  ipAddress,
-			UserAgent:   userAgent,
-			Metadata:    models.JSONBMap{
+			UserAgent:  userAgent,
+			Metadata: models.JSONBMap{
 				"amount":        amount.String(),
 				"transfer_type": req.TransferType,
 				"scheduled_at":  scheduledAt.Format(time.RFC3339),
@@ -309,11 +312,11 @@ func (s *NorthWindTransferService) initiateTransferToNorthWind(
 		Resource:   "transfer",
 		ResourceID: transfer.ID.String(),
 		IPAddress:  ipAddress,
-		UserAgent:   userAgent,
-		Metadata:    models.JSONBMap{
-			"amount":              transfer.Amount.String(),
+		UserAgent:  userAgent,
+		Metadata: models.JSONBMap{
+			"amount":                transfer.Amount.String(),
 			"northwind_transfer_id": northWindResp.TransferID,
-			"transfer_type":       transfer.TransferType,
+			"transfer_type":         transfer.TransferType,
 		},
 	}
 	s.auditService.CreateAuditLog(auditLog)
@@ -404,6 +407,17 @@ func (s *NorthWindTransferService) completeTransfer(transfer *models.Transfer) e
 		"transfer_id", transfer.ID,
 		"northwind_transfer_id", transfer.NorthWindTransferID)
 
+	// Notify regulator (async, non-blocking)
+	if s.regulatorNotificationService != nil {
+		go func() {
+			if err := s.regulatorNotificationService.NotifyTransferCompleted(transfer); err != nil {
+				s.logger.Error("Failed to notify regulator of transfer completion",
+					"transfer_id", transfer.ID,
+					"error", err)
+			}
+		}()
+	}
+
 	return nil
 }
 
@@ -456,6 +470,16 @@ func (s *NorthWindTransferService) failTransfer(transfer *models.Transfer, error
 		"transfer_id", transfer.ID,
 		"error", errorMessage)
 
+	// Notify regulator (async, non-blocking)
+	if s.regulatorNotificationService != nil {
+		go func() {
+			if err := s.regulatorNotificationService.NotifyTransferFailed(transfer); err != nil {
+				s.logger.Error("Failed to notify regulator of transfer failure",
+					"transfer_id", transfer.ID,
+					"error", err)
+			}
+		}()
+	}
+
 	return nil
 }
-

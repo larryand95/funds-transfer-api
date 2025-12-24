@@ -150,3 +150,16 @@ type ExternalAccountRepositoryInterface interface {
 	Delete(id uuid.UUID) error
 	ExistsForUser(userID uuid.UUID, accountNumber string) (bool, error)
 }
+
+// RegulatorNotificationRepositoryInterface defines the contract for regulator notification repository operations
+type RegulatorNotificationRepositoryInterface interface {
+	Create(notification *models.RegulatorNotification) error
+	Update(notification *models.RegulatorNotification) error
+	FindByID(id uuid.UUID) (*models.RegulatorNotification, error)
+	FindByTransferID(transferID uuid.UUID) ([]models.RegulatorNotification, error)
+	FindPendingNotifications(limit int) ([]models.RegulatorNotification, error)
+	FindRetryableNotifications(limit int) ([]models.RegulatorNotification, error)
+	FindByStatus(status string, limit int) ([]models.RegulatorNotification, error)
+	CountByStatus(status string) (int64, error)
+	FindApproachingDeadline(deadlineThreshold time.Duration, limit int) ([]models.RegulatorNotification, error)
+}
