@@ -1,0 +1,580 @@
+{
+	"info": {
+		"_postman_id": "northwind-integration-001",
+		"name": "NorthWind Bank Integration",
+		"description": "Postman collection for testing NorthWind Bank integration features including external account management and external transfers.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "northwind-integration"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"user_id\", response.user.id);",
+									"    pm.environment.set(\"access_token\", response.tokens.access_token);",
+									"    pm.environment.set(\"refresh_token\", response.tokens.refresh_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"SecurePass123!\",\n    \"first_name\": \"Test\",\n    \"last_name\": \"User\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user account. This will automatically create default accounts for the user."
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"user_id\", response.user.id);",
+									"    pm.environment.set(\"access_token\", response.tokens.access_token);",
+									"    pm.environment.set(\"refresh_token\", response.tokens.refresh_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"SecurePass123!\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login with email and password to get access and refresh tokens."
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints required to obtain access tokens for protected endpoints."
+		},
+		{
+			"name": "External Accounts",
+			"item": [
+				{
+					"name": "Register External Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"external_account_id\", response.id);",
+									"    console.log(\"External account registered:\", response);",
+									"    console.log(\"Status:\", response.status);",
+									"    console.log(\"Is Verified:\", response.is_verified);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"account_number\": \"1234567890\",\n    \"account_name\": \"John Doe\",\n    \"bank_code\": \"NWB\",\n    \"currency\": \"USD\",\n    \"nickname\": \"My NorthWind Account\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/external-accounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"external-accounts"
+							]
+						},
+						"description": "Register a new NorthWind Bank account for transfers. The account will be verified asynchronously with NorthWind API."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All External Accounts",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/external-accounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"external-accounts"
+							]
+						},
+						"description": "Retrieve all registered external accounts for the authenticated user."
+					},
+					"response": []
+				},
+				{
+					"name": "Get External Account by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/external-accounts/{{external_account_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"external-accounts",
+								"{{external_account_id}}"
+							]
+						},
+						"description": "Retrieve details of a specific external account by its ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete External Account",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/external-accounts/{{external_account_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"external-accounts",
+								"{{external_account_id}}"
+							]
+						},
+						"description": "Delete a registered external account. This will soft-delete the account."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for managing external NorthWind Bank accounts."
+		},
+		{
+			"name": "External Transfers",
+			"item": [
+				{
+					"name": "Initiate Instant Transfer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"transfer_id\", response.transfer_id);",
+									"    if (response.northwind_transfer_id) {",
+									"        pm.environment.set(\"northwind_transfer_id\", response.northwind_transfer_id);",
+									"    }",
+									"    console.log(\"Transfer initiated:\", response);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_account_id\": \"{{from_account_id}}\",\n    \"external_account_id\": \"{{external_account_id}}\",\n    \"amount\": \"100.00\",\n    \"currency\": \"USD\",\n    \"description\": \"Payment to NorthWind account\",\n    \"transfer_type\": \"instant\",\n    \"reference\": \"REF-001\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/external-transfers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"external-transfers"
+							]
+						},
+						"description": "Initiate an instant transfer to a NorthWind account. Instant transfers are processed immediately."
+					},
+					"response": []
+				},
+				{
+					"name": "Initiate Standard Transfer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"transfer_id\", response.transfer_id);",
+									"    if (response.northwind_transfer_id) {",
+									"        pm.environment.set(\"northwind_transfer_id\", response.northwind_transfer_id);",
+									"    }",
+									"    console.log(\"Transfer initiated:\", response);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_account_id\": \"{{from_account_id}}\",\n    \"external_account_id\": \"{{external_account_id}}\",\n    \"amount\": \"500.00\",\n    \"currency\": \"USD\",\n    \"description\": \"Standard transfer to NorthWind account\",\n    \"transfer_type\": \"standard\",\n    \"reference\": \"REF-002\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/external-transfers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"external-transfers"
+							]
+						},
+						"description": "Initiate a standard transfer. Standard transfers typically take 1-3 business days."
+					},
+					"response": []
+				},
+				{
+					"name": "Initiate Scheduled Transfer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"transfer_id\", response.transfer_id);",
+									"    console.log(\"Scheduled transfer created:\", response);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"from_account_id\": \"{{from_account_id}}\",\n    \"external_account_id\": \"{{external_account_id}}\",\n    \"amount\": \"1000.00\",\n    \"currency\": \"USD\",\n    \"description\": \"Scheduled payment to NorthWind account\",\n    \"transfer_type\": \"scheduled\",\n    \"scheduled_at\": \"2024-12-31T10:00:00Z\",\n    \"reference\": \"REF-003\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/external-transfers",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"external-transfers"
+							]
+						},
+						"description": "Schedule a transfer for a future date and time. The scheduled_at must be in ISO 8601 format and in the future."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transfer Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/external-transfers/{{transfer_id}}/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"external-transfers",
+								"{{transfer_id}}",
+								"status"
+							]
+						},
+						"description": "Check the current status of an external transfer. Returns detailed information including progress percentage for processing transfers."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints for initiating and monitoring transfers to NorthWind Bank accounts."
+		},
+		{
+			"name": "Account Management",
+			"item": [
+				{
+					"name": "Get User Accounts",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    if (response.accounts && response.accounts.length > 0) {",
+									"        pm.environment.set(\"from_account_id\", response.accounts[0].id);",
+									"        console.log(\"Using account:\", response.accounts[0].account_number);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/accounts",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"accounts"
+							]
+						},
+						"description": "Get all accounts for the authenticated user. Use this to get account IDs needed for transfers."
+					},
+					"response": []
+				}
+			],
+			"description": "Helper endpoints to get account information needed for transfers."
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}
+
