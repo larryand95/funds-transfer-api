@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -63,6 +65,9 @@ type SecurityConfig struct {
 }
 
 func Load() *Config {
+	// Load .env file if it exists (non-blocking - continues if file not found)
+	godotenv.Load()
+
 	config := &Config{
 		Server: ServerConfig{
 			Port:         getEnv("SERVER_PORT", "8080"),

@@ -4,7 +4,6 @@ banking-api
 .env.local
 tmp
 .DS_STORE
-api
 
 ### GoLand+all ###
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio, WebStorm and Rider
