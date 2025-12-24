@@ -594,13 +594,15 @@ func (s *accountService) executeTransfer(
 	description, idempotencyKey string,
 	fromAccount, toAccount *models.Account,
 ) (*models.Transfer, uuid.UUID, uuid.UUID, error) {
+	toAccountID := toAccount.ID
 	transfer := &models.Transfer{
 		FromAccountID:  fromAccount.ID,
-		ToAccountID:    toAccount.ID,
+		ToAccountID:    &toAccountID,
 		Amount:         amount,
 		Description:    description,
 		IdempotencyKey: idempotencyKey,
 		Status:         models.TransferStatusPending,
+		IsExternal:     false, // Internal transfer
 	}
 
 	if err := s.transferRepo.Create(transfer); err != nil {
